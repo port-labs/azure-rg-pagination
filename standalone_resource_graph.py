@@ -44,7 +44,6 @@ import sys
 import textwrap
 import time
 from contextlib import asynccontextmanager
-from itertools import batched
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
@@ -66,8 +65,6 @@ DEFAULT_BASE_URL = "https://management.azure.com"
 DEFAULT_API_VERSION = "2024-04-01"
 DEFAULT_SUBSCRIPTION_API_VERSION = "2022-12-01"
 DEFAULT_HTTP_TIMEOUT = 60
-DEFAULT_PAGE_SIZE = 100
-
 # Rate limiter defaults (Azure token bucket algorithm)
 RATE_LIMIT_CAPACITY = 250
 RATE_LIMIT_REFILL_RATE = 25.0
@@ -485,8 +482,7 @@ class SubscriptionClient:
             subscriptions = response.get("value", [])
             logger.info(f"Fetched batch of {len(subscriptions)} subscriptions")
 
-            for batch in batched(subscriptions, DEFAULT_PAGE_SIZE):
-                yield list(batch)
+            yield subscriptions
 
             next_link = response.get("nextLink")
             if not next_link:
@@ -547,8 +543,7 @@ class ResourceGraphClient:
             )
             total_fetched += count
 
-            for batch in batched(data, DEFAULT_PAGE_SIZE):
-                yield list(batch)
+            yield data
 
             if not skip_token:
                 break
@@ -684,7 +679,8 @@ async def query_resource_graph(
             tasks = []
             task_batch_nums = []  # Track which subscription batch each task belongs to
 
-            for subscription_batch in batched(subscriptions, SUBSCRIPTION_BATCH_SIZE):
+            for i in range(0, len(subscriptions), SUBSCRIPTION_BATCH_SIZE):
+                subscription_batch = subscriptions[i:i + SUBSCRIPTION_BATCH_SIZE]
                 subscription_batch_num += 1
                 subscription_ids = [sub["subscriptionId"] for sub in subscription_batch]
                 logger.info(

@@ -37,7 +37,7 @@ Adding `| order by id asc` to your query ensures consistent pagination results.
    ./install.sh
    ```
 
-3. **Configure your Azure credentials** by editing the `.env` file:
+3. **Configure your Azure credentials** by creating a `.env` file (in the root folder):
    ```env
    AZURE_TENANT_ID=your-tenant-id
    AZURE_CLIENT_ID=your-client-id
